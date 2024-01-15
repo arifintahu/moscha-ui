@@ -6,10 +6,14 @@ import {
   Grid,
   GridItem,
   Heading,
+  IconButton,
+  Input,
   Select,
   Stack,
+  border,
 } from '@chakra-ui/react'
 import Chat from '@/components/Chat'
+import { ArrowUpIcon, SearchIcon } from '@chakra-ui/icons'
 
 export default function Home() {
   return (
@@ -21,7 +25,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main>
-        <Grid templateColumns="300px 1fr">
+        <Grid templateColumns="250px 1fr">
           <GridItem w="100%" minH={'100vh'} bg={'gray.900'} p={4}>
             <Box position={'fixed'}>
               <Heading fontSize={'x-large'} mb={4}>
@@ -40,7 +44,7 @@ export default function Home() {
             <Box
               as="header"
               position={'fixed'}
-              w="calc(100% - 300px)"
+              w="calc(100% - 250px)"
               zIndex={99}
               bg={'gray.700'}
               p={4}
@@ -54,7 +58,7 @@ export default function Home() {
               <Box
                 mx={'auto'}
                 maxW={{ base: 'lg', md: 'xl', lg: '3xl' }}
-                mt={'75px'}
+                my={'75px'}
               >
                 <Stack gap={10}>
                   <Chat name="You" message="Hello world!" />
@@ -68,11 +72,45 @@ export default function Home() {
                   <Chat name="You" message="Hello world!" />
                   <Chat name="Moscha" message="Hi!" />
                   <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
+                  <Chat
+                    name="Moscha"
+                    message="In the Cosmos ecosystem, we have numerous app chains, each possessing its own sovereignty. The challenge arises as the number of chains grows, making it cumbersome to manage accounts across multiple chains. To address this, we propose the development of an IBC module capable of executing transactions on other chains directly from a single chain. This concept mirrors the interchain account idea but eliminates the need for creating proxy accounts. Our focus is on establishing a method to verify authenticity from the source chain to the destination chain using the same wallet."
+                  />
                 </Stack>
               </Box>
             </Box>
-            <Flex>Chat form</Flex>
+            <Box
+              position={'fixed'}
+              w="calc(100% - 250px)"
+              bottom={0}
+              zIndex={99}
+              bg={'gray.700'}
+              px={4}
+              pb={4}
+            >
+              <Flex justifyContent={'center'}>
+                <Flex
+                  p={2}
+                  borderColor={'gray.500'}
+                  borderWidth={1}
+                  borderRadius={'xl'}
+                  w={'3xl'}
+                >
+                  <Input
+                    placeholder="Message Moscha..."
+                    border={'none'}
+                    _focusVisible={{
+                      outline: 'none',
+                    }}
+                  />
+                  <IconButton
+                    fontSize={24}
+                    aria-label="Send message"
+                    icon={<ArrowUpIcon />}
+                  />
+                </Flex>
+              </Flex>
+            </Box>
           </GridItem>
         </Grid>
       </main>
