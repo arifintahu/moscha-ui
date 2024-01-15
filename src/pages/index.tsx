@@ -10,12 +10,32 @@ import {
   Input,
   Select,
   Stack,
-  border,
+  Text,
 } from '@chakra-ui/react'
 import Chat from '@/components/Chat'
-import { ArrowUpIcon, SearchIcon } from '@chakra-ui/icons'
+import { ArrowUpIcon } from '@chakra-ui/icons'
+import { useState } from 'react'
+import { trimAddress } from '@/utils/helpers'
 
 export default function Home() {
+  const [address, setAddress] = useState('')
+  const connectKeplr = async () => {
+    if (!window.keplr) {
+      alert('Please install Keplr Extension')
+    }
+
+    const chainId = 'theta-testnet-001'
+
+    await window.keplr?.enable(chainId)
+    const offlineSigner = window.keplr?.getOfflineSigner(chainId)
+
+    const accounts = await offlineSigner?.getAccounts()
+    if (!accounts?.length) {
+      alert('Account not found')
+    }
+    setAddress(accounts ? accounts[0].address : '')
+  }
+
   return (
     <>
       <Head>
@@ -50,7 +70,11 @@ export default function Home() {
               p={4}
             >
               <Flex justifyContent={'flex-end'}>
-                <Button>Connect Wallet</Button>
+                {address ? (
+                  <Text>{trimAddress(address)}</Text>
+                ) : (
+                  <Button onClick={connectKeplr}>Connect Wallet</Button>
+                )}
               </Flex>
             </Box>
 
