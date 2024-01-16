@@ -14,18 +14,30 @@ import {
 } from '@chakra-ui/react'
 import Chat from '@/components/Chat'
 import { ArrowUpIcon } from '@chakra-ui/icons'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
 import { useChains } from '@/hooks/use-query'
 
 export default function Home() {
   const [address, setAddress] = useState('')
+  const [chainId, setChainId] = useState('')
+
+  const { data: chains } = useChains()
+
+  useEffect(() => {
+    if (chains && chains.length) {
+      setChainId(chains[0].id)
+    }
+  }, [chains])
+
   const connectKeplr = async () => {
     if (!window.keplr) {
       alert('Please install Keplr Extension')
     }
 
-    const chainId = 'theta-testnet-001'
+    if (!chainId) {
+      alert('Please select chain')
+    }
 
     await window.keplr?.enable(chainId)
     const offlineSigner = window.keplr?.getOfflineSigner(chainId)
@@ -36,8 +48,6 @@ export default function Home() {
     }
     setAddress(accounts ? accounts[0].address : '')
   }
-
-  const { data: chains } = useChains()
 
   return (
     <>
@@ -56,7 +66,8 @@ export default function Home() {
               </Heading>
               <Select
                 placeholder="Select chain"
-                defaultValue={chains ? chains[0].id : ''}
+                value={chainId}
+                onChange={(e) => setChainId(e.target.value)}
               >
                 {chains &&
                   chains.map((chain) => (
