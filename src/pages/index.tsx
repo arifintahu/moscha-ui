@@ -17,10 +17,13 @@ import { ArrowUpIcon } from '@chakra-ui/icons'
 import { useEffect, useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
 import { useChains } from '@/hooks/use-query'
+import { postSession } from '@/api/session.action'
 
 export default function Home() {
   const [address, setAddress] = useState('')
   const [chainId, setChainId] = useState('')
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false)
+  const [sessionId, setSessionId] = useState('')
 
   const { data: chains } = useChains()
 
@@ -31,22 +34,37 @@ export default function Home() {
   }, [chains])
 
   const connectKeplr = async () => {
-    if (!window.keplr) {
-      alert('Please install Keplr Extension')
-    }
+    try {
+      if (!window.keplr) {
+        alert('Please install Keplr Extension')
+      }
 
-    if (!chainId) {
-      alert('Please select chain')
-    }
+      if (!chainId) {
+        alert('Please select chain')
+      }
 
-    await window.keplr?.enable(chainId)
-    const offlineSigner = window.keplr?.getOfflineSigner(chainId)
+      setIsLoadingWallet(true)
+      await window.keplr?.enable(chainId)
+      const offlineSigner = window.keplr?.getOfflineSigner(chainId)
 
-    const accounts = await offlineSigner?.getAccounts()
-    if (!accounts?.length) {
-      alert('Account not found')
+      const accounts = await offlineSigner?.getAccounts()
+      if (!accounts?.length) {
+        alert('Account not found')
+        setIsLoadingWallet(false)
+        return
+      }
+
+      const addr = accounts ? accounts[0].address : ''
+      const data = await postSession(addr, chainId)
+
+      setAddress(addr)
+      setSessionId(data ? data.id : '')
+      setIsLoadingWallet(false)
+    } catch (err) {
+      alert('Something error')
+      console.error(err)
+      setIsLoadingWallet(false)
     }
-    setAddress(accounts ? accounts[0].address : '')
   }
 
   return (
@@ -91,7 +109,9 @@ export default function Home() {
                 {address ? (
                   <Text>{trimAddress(address)}</Text>
                 ) : (
-                  <Button onClick={connectKeplr}>Connect Wallet</Button>
+                  <Button isLoading={isLoadingWallet} onClick={connectKeplr}>
+                    Connect Wallet
+                  </Button>
                 )}
               </Flex>
             </Box>
