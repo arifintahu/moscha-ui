@@ -16,6 +16,7 @@ import Chat from '@/components/Chat'
 import { ArrowUpIcon } from '@chakra-ui/icons'
 import { useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
+import { useChains } from '@/hooks/use-query'
 
 export default function Home() {
   const [address, setAddress] = useState('')
@@ -36,6 +37,8 @@ export default function Home() {
     setAddress(accounts ? accounts[0].address : '')
   }
 
+  const { data: chains } = useChains()
+
   return (
     <>
       <Head>
@@ -53,10 +56,14 @@ export default function Home() {
               </Heading>
               <Select
                 placeholder="Select chain"
-                defaultValue={'theta-testnet-001'}
+                defaultValue={chains ? chains[0].id : ''}
               >
-                <option value="theta-testnet-001">Cosmos Hub Testnet</option>
-                <option value="orai-testnet-001">Orai Testnet</option>
+                {chains &&
+                  chains.map((chain) => (
+                    <option key={chain.id} value={chain.id}>
+                      {chain.id}
+                    </option>
+                  ))}
               </Select>
             </Box>
           </GridItem>
