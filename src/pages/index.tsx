@@ -18,12 +18,20 @@ import { useEffect, useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
 import { useChains } from '@/hooks/use-query'
 import { postSession } from '@/api/session.action'
+import { postChat } from '@/api/chat.action'
+
+type Chat = {
+  name: string
+  message: string
+}
 
 export default function Home() {
   const [address, setAddress] = useState('')
   const [chainId, setChainId] = useState('')
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
   const [sessionId, setSessionId] = useState('')
+  const [message, setMessage] = useState('')
+  const [chats, setChats] = useState<Chat[]>([])
 
   const { data: chains } = useChains()
 
@@ -33,14 +41,22 @@ export default function Home() {
     }
   }, [chains])
 
+  useEffect(() => {
+    if (chats.length) {
+      window.scrollTo(0, document.body.scrollHeight)
+    }
+  }, [chats])
+
   const connectKeplr = async () => {
     try {
       if (!window.keplr) {
         alert('Please install Keplr Extension')
+        return
       }
 
       if (!chainId) {
         alert('Please select chain')
+        return
       }
 
       setIsLoadingWallet(true)
@@ -64,6 +80,49 @@ export default function Home() {
       alert('Something error')
       console.error(err)
       setIsLoadingWallet(false)
+    }
+  }
+
+  const handleSend = async () => {
+    try {
+      if (!sessionId) {
+        alert('Please connect wallet')
+        return
+      }
+
+      if (!message) {
+        alert('Please enter message')
+        return
+      }
+
+      setChats((oldChats) => [
+        ...oldChats,
+        {
+          name: 'You',
+          message,
+        },
+      ])
+      const data = await postChat(sessionId, message)
+      if (data && data.message) {
+        setChats((oldChats) => [
+          ...oldChats,
+          {
+            name: 'Moscha',
+            message: data.message,
+          },
+        ])
+      }
+
+      setMessage('')
+    } catch (err) {
+      alert('Something error')
+      console.error(err)
+    }
+  }
+
+  const handleEnterSend = (key: string) => {
+    if (key === 'Enter') {
+      handleSend()
     }
   }
 
@@ -123,21 +182,9 @@ export default function Home() {
                 my={'75px'}
               >
                 <Stack gap={10}>
-                  <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
-                  <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
-                  <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
-                  <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
-                  <Chat name="You" message="Hello world!" />
-                  <Chat name="Moscha" message="Hi!" />
-                  <Chat name="You" message="Hello world!" />
-                  <Chat
-                    name="Moscha"
-                    message="In the Cosmos ecosystem, we have numerous app chains, each possessing its own sovereignty. The challenge arises as the number of chains grows, making it cumbersome to manage accounts across multiple chains. To address this, we propose the development of an IBC module capable of executing transactions on other chains directly from a single chain. This concept mirrors the interchain account idea but eliminates the need for creating proxy accounts. Our focus is on establishing a method to verify authenticity from the source chain to the destination chain using the same wallet."
-                  />
+                  {chats.map((chat, index) => (
+                    <Chat key={index} name={chat.name} message={chat.message} />
+                  ))}
                 </Stack>
               </Box>
             </Box>
@@ -164,11 +211,15 @@ export default function Home() {
                     _focusVisible={{
                       outline: 'none',
                     }}
+                    onChange={(e) => setMessage(e.target.value)}
+                    value={message}
+                    onKeyDown={(e) => handleEnterSend(e.key)}
                   />
                   <IconButton
                     fontSize={24}
                     aria-label="Send message"
                     icon={<ArrowUpIcon />}
+                    onClick={handleSend}
                   />
                 </Flex>
               </Flex>
