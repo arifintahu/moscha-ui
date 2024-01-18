@@ -11,6 +11,7 @@ import {
   Select,
   Stack,
   Text,
+  useToast,
 } from '@chakra-ui/react'
 import Chat from '@/components/Chat'
 import { ArrowUpIcon } from '@chakra-ui/icons'
@@ -18,7 +19,16 @@ import { useEffect, useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
 import { useChains } from '@/hooks/use-query'
 import { postSession } from '@/api/session.action'
-import { postChat } from '@/api/chat.action'
+import { ActionItem, postChat } from '@/api/chat.action'
+import { AxiosError } from 'axios'
+import {
+  GasPrice,
+  SigningStargateClient,
+  calculateFee,
+  coins,
+  defaultRegistryTypes,
+} from '@cosmjs/stargate'
+import type { StdFee } from '@cosmjs/stargate'
 
 type Chat = {
   name: string
@@ -32,6 +42,8 @@ export default function Home() {
   const [sessionId, setSessionId] = useState('')
   const [message, setMessage] = useState('')
   const [chats, setChats] = useState<Chat[]>([])
+
+  const toast = useToast()
 
   const { data: chains } = useChains()
 
@@ -77,7 +89,7 @@ export default function Home() {
       setSessionId(data ? data.id : '')
       setIsLoadingWallet(false)
     } catch (err) {
-      alert('Something error')
+      alert('Something wrong')
       console.error(err)
       setIsLoadingWallet(false)
     }
@@ -114,15 +126,109 @@ export default function Home() {
       }
 
       setMessage('')
-    } catch (err) {
-      alert('Something error')
+
+      if (data?.actionItems.length) {
+        handleTransaction(data.actionItems)
+      }
+    } catch (err: AxiosError | any) {
       console.error(err)
+      if (err.response) {
+        alert(err.response.data.message)
+        setAddress('')
+        return
+      }
+      alert(err.message)
     }
   }
 
   const handleEnterSend = (key: string) => {
     if (key === 'Enter') {
       handleSend()
+    }
+  }
+
+  const handleTransaction = async (actionItems: ActionItem[]) => {
+    try {
+      if (!window.keplr) {
+        alert('Please install Keplr Extension')
+        return
+      }
+
+      if (!chainId) {
+        alert('Please select chain')
+        return
+      }
+
+      if (!address) {
+        alert('Address not found')
+        return
+      }
+
+      const offlineSigner = window.keplr.getOfflineSigner(chainId)
+      const chain = chains?.find((item) => item.id === chainId)
+      if (!chain) {
+        alert('Chain not found')
+        return
+      }
+      const client = await SigningStargateClient.connectWithSigner(
+        chain.rpc,
+        offlineSigner
+      )
+
+      const fromAddress = actionItems.find(
+        (item) => item.field === 'fromAddress'
+      )
+      const amount = actionItems.find((item) => item.field === 'amount')
+      const denom = actionItems.find((item) => item.field === 'denom')
+      const toAddress = actionItems.find((item) => item.field === 'toAddress')
+      if (!fromAddress || !amount || !denom || !toAddress) {
+        alert('Field not completed')
+        return
+      }
+      const foundMsgType = defaultRegistryTypes.find(
+        (element) => element[0] === '/cosmos.bank.v1beta1.MsgSend'
+      )
+      if (!foundMsgType) {
+        alert('Msg type not found')
+        return
+      }
+      const finalMsg = {
+        typeUrl: foundMsgType[0],
+        value: {
+          fromAddress: fromAddress.value,
+          toAddress: toAddress.value,
+          amount: coins(amount.value, denom.value),
+        },
+      }
+      const gasEstimation = await client.simulate(
+        address, // Signer address
+        [finalMsg],
+        'Moscha'
+      )
+      const usedFee = calculateFee(
+        Math.round(gasEstimation * 1.7), // gasEstimation * feeMultiplier
+        GasPrice.fromString('0.05uatom') // Set default Gas price
+      )
+      const result = await client.signAndBroadcast(
+        address,
+        [finalMsg],
+        usedFee,
+        'Moscha'
+      )
+      if (result) {
+        toast({
+          title: 'Success',
+          description: `Tx Hash ${result.transactionHash}`,
+          status: 'success',
+          isClosable: true,
+          position: 'top',
+          duration: 20000,
+        })
+      }
+      console.log(result)
+    } catch (err) {
+      alert('Something wrong')
+      console.error(err)
     }
   }
 
