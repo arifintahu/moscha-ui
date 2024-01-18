@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react'
 import { trimAddress } from '@/utils/helpers'
 import { useChains } from '@/hooks/use-query'
 import { postSession } from '@/api/session.action'
-import { ActionItem, postChat } from '@/api/chat.action'
+import { Action, ActionItem, postChat } from '@/api/chat.action'
 import { AxiosError } from 'axios'
 import {
   GasPrice,
@@ -28,7 +28,6 @@ import {
   coins,
   defaultRegistryTypes,
 } from '@cosmjs/stargate'
-import type { StdFee } from '@cosmjs/stargate'
 
 type Chat = {
   name: string
@@ -127,8 +126,8 @@ export default function Home() {
 
       setMessage('')
 
-      if (data?.actionItems.length) {
-        handleTransaction(data.actionItems)
+      if (data?.action && data?.actionItems.length) {
+        handleTransaction(data.action, data.actionItems)
       }
     } catch (err: AxiosError | any) {
       console.error(err)
@@ -147,7 +146,10 @@ export default function Home() {
     }
   }
 
-  const handleTransaction = async (actionItems: ActionItem[]) => {
+  const handleTransaction = async (
+    action: Action,
+    actionItems: ActionItem[]
+  ) => {
     try {
       if (!window.keplr) {
         alert('Please install Keplr Extension')
@@ -175,6 +177,11 @@ export default function Home() {
         offlineSigner
       )
 
+      if (action.name !== 'MsgTransfer') {
+        alert('Unknown type')
+        return
+      }
+
       const fromAddress = actionItems.find(
         (item) => item.field === 'fromAddress'
       )
@@ -186,7 +193,7 @@ export default function Home() {
         return
       }
       const foundMsgType = defaultRegistryTypes.find(
-        (element) => element[0] === '/cosmos.bank.v1beta1.MsgSend'
+        (element) => element[0] === action.url
       )
       if (!foundMsgType) {
         alert('Msg type not found')
@@ -207,7 +214,7 @@ export default function Home() {
       )
       const usedFee = calculateFee(
         Math.round(gasEstimation * 1.7), // gasEstimation * feeMultiplier
-        GasPrice.fromString('0.05uatom') // Set default Gas price
+        GasPrice.fromString(chain.gasFee) // Set default Gas price
       )
       const result = await client.signAndBroadcast(
         address,
@@ -224,6 +231,24 @@ export default function Home() {
           position: 'top',
           duration: 20000,
         })
+        if (result.code === 0) {
+          setChats((oldChats) => [
+            ...oldChats,
+            {
+              name: 'Moscha',
+              message: `Sent ${amount.value}${denom.value} to ${toAddress.value} \n
+              Tx Hash ${result.transactionHash}`,
+            },
+          ])
+        } else {
+          setChats((oldChats) => [
+            ...oldChats,
+            {
+              name: 'Moscha',
+              message: `Unexpected error, Tx Hash ${result.transactionHash}`,
+            },
+          ])
+        }
       }
       console.log(result)
     } catch (err) {
@@ -254,8 +279,12 @@ export default function Home() {
               >
                 {chains &&
                   chains.map((chain) => (
-                    <option key={chain.id} value={chain.id}>
-                      {chain.id}
+                    <option
+                      key={chain.id}
+                      value={chain.id}
+                      style={{ color: 'black' }}
+                    >
+                      {chain.name}
                     </option>
                   ))}
               </Select>

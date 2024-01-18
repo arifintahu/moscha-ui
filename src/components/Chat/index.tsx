@@ -14,7 +14,11 @@ export default function Chat({
         <Heading fontSize={'lg'} mt={1}>
           {name}
         </Heading>
-        <Text>{message}</Text>
+        <Stack gap={0}>
+          {message.split('\n').map((value, index) => (
+            <Text key={index}>{value}</Text>
+          ))}
+        </Stack>
       </Stack>
     </Flex>
   )

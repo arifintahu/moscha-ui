@@ -1,6 +1,11 @@
 import { throwError } from '@/utils/errors'
 import { request } from '@/utils/request'
 
+export type Action = {
+  name: string
+  url: string
+}
+
 export type ActionItem = {
   field: string
   value: string
@@ -9,6 +14,7 @@ export type ActionItem = {
 export type ChatResponse = {
   id: string
   message: string
+  action: Action | null
   actionItems: ActionItem[]
 }
 
